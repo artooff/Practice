@@ -1,0 +1,142 @@
+using System;
+using System.Collections.Generic;
+
+namespace Task1
+{
+    class Program
+    {
+        public sealed class Cache<T>
+        {
+            private Dictionary<string, (T, DateTime)> _data;
+            private TimeSpan _lifeTime;
+            private int _maxSize;
+
+            public Cache(TimeSpan lifeTime, int maxSize)
+            {
+                _data = new Dictionary<string, (T, DateTime)>();
+                _lifeTime = lifeTime;
+                _maxSize = maxSize;
+            }
+
+            public void Set(string key, T note)
+            {
+                LifeTimeCheck();
+                if(_data.TryGetValue(key, out _))
+                {
+                    throw new ArgumentException(key);
+
+                }
+
+                if(_data.Count == _maxSize)
+                {
+                    TimeSpan theOldestData = TimeSpan.Zero;
+                    TimeSpan dif;
+                    string theOldestDataKey = null;
+
+                    foreach(var item in _data)
+                    {
+                        if((dif = DateTime.Now - item.Value.Item2) > theOldestData)
+                        {
+                            theOldestData = dif;
+                            theOldestDataKey = item.Key;
+                        }
+                    }
+
+                    _data.Remove(theOldestDataKey);
+                    _data.Add(key, (note, DateTime.Now));
+
+                }
+                else
+                {
+                    _data.Add(key, (note, DateTime.Now));
+                }
+                LifeTimeCheck();
+            }
+
+            public T Get(string key)
+            {
+                LifeTimeCheck();
+                (T, DateTime) keyDataPair;
+                if(_data.TryGetValue(key, out keyDataPair))
+                {
+                    return keyDataPair.Item1;
+                }
+                else
+                {
+                    throw new KeyNotFoundException();
+                }
+                
+            }
+
+            private void LifeTimeCheck()
+            {
+                foreach(var item in _data)
+                {
+                    if(DateTime.Now - item.Value.Item2 > _lifeTime)
+                    {
+                        _data.Remove(item.Key);
+                    }
+                }
+            }
+        }
+
+        public static void menuShow()
+        {
+            Console.WriteLine("1. Add note" +
+            Environment.NewLine + "2. Get note" +
+            Environment.NewLine + "3. Exit");
+        }
+
+        static void Main()
+        {
+            Cache<string> cache = new Cache<string>(new TimeSpan(0, 0, 15), 5);
+            string key;
+
+            int choice = 0;
+            string data = null;
+
+            while(choice != 3)
+            {
+                menuShow();
+
+                choice = Convert.ToInt32(Console.ReadLine());
+
+                switch (choice)
+                {
+                    case 1:
+                        Console.WriteLine("Enter key and data to add:");
+                        key = Console.ReadLine();
+                        data = Console.ReadLine();
+                        try
+                        {
+                            cache.Set(key, data);
+                        }
+                        catch
+                        {
+                            Console.WriteLine("This key already exists");
+                        }
+                        break;
+                    case 2:
+                        Console.WriteLine("Enter key to get data:");
+                        key = Console.ReadLine();
+                        try
+                        {
+                            Console.WriteLine(cache.Get(key));
+                        }
+                        catch (KeyNotFoundException)
+                        {
+                            Console.WriteLine("This key was not found");
+                        }
+                        break;
+                    case 3:
+                        break;
+                    default:
+                        Console.WriteLine("Invalid choice");
+                        break;
+                }
+
+            }
+            
+        }
+    }
+}
